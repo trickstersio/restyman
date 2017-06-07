@@ -22,7 +22,7 @@
     "LICENSE",
     "README.md"
   ],
-  "main": "dist/src/index.js",
+  "main": "dist/restyman.js",
   "scripts": {
     "build": "npm run clean && mkdir dist && npm-run-all --parallel build:development build:production",
     "build:development": "NODE_ENV=development rollup -c",
