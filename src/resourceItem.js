@@ -14,7 +14,9 @@ const resourceItem = ({ id, path, subresources, instanceMethods, axiosFactory })
   })
 
   forEach(instanceMethods, (method, methodName) => {
-    resource[methodName] = () => method(requester, resource, ...arguments)
+    resource[methodName] = () => function() {
+      return method(requester, ...arguments)
+    }
   })
 
   return resource
