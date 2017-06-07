@@ -27,7 +27,7 @@ const resource = ({ path, axiosFactory }) => {
   }
 
   resource.collection = (methodName, method) => {
-    resource[methodName] = () => method.request(requester, resource, ...arguments)
+    resource[methodName] = () => method(requester, resource, ...arguments)
   }
 
   resource.member = (methodName, method) => {
