@@ -28,7 +28,6 @@ const resource = ({ path, axiosFactory }) => {
 
   resource.collection = (methodName, method) => {
     resource[methodName] = function() {
-      console.log('>>> arguments', arguments)
       return method(requester, ...arguments)
     }
   }
