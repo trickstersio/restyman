@@ -1,1 +1,2 @@
-console.log('Hello')
+import resource from './resource'
+export default resource

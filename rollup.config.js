@@ -13,6 +13,7 @@ export default {
   targets: [
     { dest: `${destBase}${destExtension}`, format: 'cjs' },
   ],
+  external: [ 'lodash/forEach' ],
   plugins: [
     babel({ babelrc: false, presets: [ 'es2015-rollup', 'stage-1' ] }),
     isProduction && uglify(),
