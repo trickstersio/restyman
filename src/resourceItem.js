@@ -5,7 +5,8 @@ const resourceItem = ({ id, path, subresources, instanceMethods, createRequester
 
   const resource = () => {}
   resource.getId = () => id
-  resource.getPath = () => path
+  resource.getPath = () => resourceItemPath
+  resource.getInstanceMethods = () => instanceMethods
 
   const requester = createRequester({ path: resourceItemPath })
 
@@ -15,7 +16,7 @@ const resourceItem = ({ id, path, subresources, instanceMethods, createRequester
   })
 
   forEach(instanceMethods, (method, methodName) => {
-    resource[methodName] = () => function() {
+    resource[methodName] = function() {
       return method(requester, ...arguments)
     }
   })

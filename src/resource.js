@@ -35,9 +35,7 @@ const resource = ({ path, createRequester }) => {
   }
 
   resource.member = (methodName, method) => {
-    instanceMethods[methodName] = function() {
-      return method(requester, ...arguments)
-    }
+    instanceMethods[methodName] = method
   }
 
   return resource
