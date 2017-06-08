@@ -6,7 +6,6 @@ const resource = ({ path, createRequester }) => {
 
   const methods = []
   const instanceMethods = {}
-  const getPath = () => `${prefix}${path}`
 
   const resource = (id) => resourceItem({
     id,
@@ -16,11 +15,13 @@ const resource = ({ path, createRequester }) => {
     createRequester: createRequester
   })
 
-  let requester = createRequester({ path: getPath() })
+  resource.getPath = () => `${prefix}${path}`
+
+  let requester = createRequester({ path: resource.getPath() })
 
   resource.setPrefix = (pfx) => {
     prefix = `${pfx}/`
-    requester = createRequester({ path: getPath() })
+    requester = createRequester({ path: resource.getPath() })
   }
 
   resource.subresource = (newSubsresources) => {

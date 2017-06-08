@@ -5,6 +5,7 @@ const resourceItem = ({ id, path, subresources, instanceMethods, createRequester
 
   const resource = () => {}
   resource.getId = () => id
+  resource.getPath = () => path
 
   const requester = createRequester({ path: resourceItemPath })
 
