@@ -1,12 +1,12 @@
 import forEach from 'lodash/forEach'
 
-const resourceItem = ({ id, path, subresources, instanceMethods, axiosFactory }) => {
+const resourceItem = ({ id, path, subresources, instanceMethods, createRequester }) => {
   const resourceItemPath = `${path}/${id}`
 
   const resource = () => {}
   resource.getId = () => id
 
-  const requester = axiosFactory({ path: resourceItemPath })
+  const requester = createRequester({ path: resourceItemPath })
 
   forEach(subresources, (subresource, subresourceName) => {
     subresource.setPrefix(resourceItemPath)

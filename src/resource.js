@@ -1,6 +1,6 @@
 import resourceItem from './resourceItem'
 
-const resource = ({ path, axiosFactory }) => {
+const resource = ({ path, createRequester }) => {
   let prefix = ''
   let subresources = {}
 
@@ -10,16 +10,17 @@ const resource = ({ path, axiosFactory }) => {
 
   const resource = (id) => resourceItem({
     id,
+    path,
     subresources,
     instanceMethods,
-    axiosFactory: axiosFactory
+    createRequester: createRequester
   })
 
-  let requester = axiosFactory({ path: getPath() })
+  let requester = createRequester({ path: getPath() })
 
   resource.setPrefix = (pfx) => {
     prefix = `${pfx}/`
-    requester = axiosFactory({ path: getPath() })
+    requester = createRequester({ path: getPath() })
   }
 
   resource.subresource = (newSubsresources) => {
