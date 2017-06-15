@@ -1,4 +1,4 @@
-export const createEndpoint = () => {
+const createEndpoint = () => {
   let req = null
 
   const execute = function () {
@@ -17,3 +17,5 @@ export const createEndpoint = () => {
 
   return result
 }
+
+export default createEndpoint

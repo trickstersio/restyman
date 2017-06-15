@@ -1,61 +1,67 @@
-import { createEndpoint } from './endpoint'
 import { getAxiosFactory } from './axiosFactory'
+import createEndpoint from './createEndpoint'
 
 const createResource = ({ path }) => {
-  let axios = null
-  let prefix = null
   let subresources = {}
   const memberEndpoints = {}
 
-  const getPath = () => `${prefix}${path}`
+  const createMember = (path) => {
+    const r = (id) => {
+      const resourcePath = `${path}/${id}`
+      const resource = createResource({ path: resourcePath })
 
-  const createAxios = (_prefix = '') => {
-    prefix = _prefix
-    axios = getAxiosFactory()(getPath())
-  }
+      for (let code in memberEndpoints) {
+        resource.assignEndpoint(code, memberEndpoints[code])
+      }
 
-  createAxios()
+      for (let code in subresources) {
+        resource[code] = subresources[code].copyWithPrefix(`${resourcePath}/`)
+      }
 
-  const r = (id) => {
-    const memberPath = `${getPath()}/${id}`
-    const member = createResource({ path: memberPath })
-
-    for (let code in memberEndpoints) {
-      member.assignEndpoint(code, memberEndpoints[code])
+      return resource
     }
 
-    for (let code in subresources) {
-      subresources[code].createAxios(`${memberPath}/`)
-      member[code] = subresources[code]
+    r.axios = getAxiosFactory()(path)
+
+    r.getPath = () => path
+
+    r.assignEndpoint = function (code, endpoint) {
+      r[code] = function () {
+        const { axios } = this
+        return endpoint.execute({ axios }, ...arguments)
+      }
+      return endpoint
     }
 
-    return member
-  }
+    r.copyWithPrefix = function (prefix) {
+      const copy = createMember(`${prefix}${this.getPath()}`)
 
-  r.getPath = getPath
-  r.createAxios = createAxios
+      for (let field in this) {
+        if (!copy[field]) {
+          copy[field] = this[field]
+        }
+      }
 
-  r.assignEndpoint = (code, endpoint) => {
-    r[code] = function () {
-      return endpoint.execute({ axios }, ...arguments)
+      return copy
     }
-    return endpoint
+
+    r.collection = function (code) {
+      return this.assignEndpoint(code, createEndpoint())
+    }
+
+    r.member = (code) => {
+      memberEndpoints[code] = createEndpoint()
+      return memberEndpoints[code]
+    }
+
+    r.subresources = (_subresourses) => {
+      subresources = _subresourses
+    }
+
+    return r
   }
 
-  r.collection = (code) => {
-    return r.assignEndpoint(code, createEndpoint())
-  }
-
-  r.member = (code) => {
-    memberEndpoints[code] = createEndpoint()
-    return memberEndpoints[code]
-  }
-
-  r.subresources = (_subresourses) => {
-    subresources = _subresourses
-  }
-
-  return r
+  return createMember(path)
 }
 
 export default createResource
