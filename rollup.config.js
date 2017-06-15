@@ -14,7 +14,17 @@ export default {
     { dest: `${destBase}${destExtension}`, format: 'cjs' }
   ],
   plugins: [
-    babel(),
+    babel({
+      babelrc: false,
+      presets: [
+        [
+          'es2015',
+          {
+            modules: false
+          }
+        ]
+      ]
+    }),
     isProduction && uglify(),
     filesize()
   ].filter((plugin) => !!plugin)
