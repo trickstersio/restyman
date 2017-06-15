@@ -1,13 +1,9 @@
 import { createEndpoint } from './endpoint'
+import { getAxiosFactory } from './axiosFactory'
 
-let axiosFactory = null
-export const setAxiosFactory = (af) => {
-  axiosFactory = af
-}
-
-export const createResource = function ({ path }) {
-  let prefix = null
+const createResource = ({ path }) => {
   let axios = null
+  let prefix = null
   let subresources = {}
   const memberEndpoints = {}
 
@@ -15,7 +11,7 @@ export const createResource = function ({ path }) {
 
   const createAxios = (_prefix = '') => {
     prefix = _prefix
-    axios = axiosFactory(getPath())
+    axios = getAxiosFactory()(getPath())
   }
 
   createAxios()
@@ -61,3 +57,5 @@ export const createResource = function ({ path }) {
 
   return r
 }
+
+export default createResource

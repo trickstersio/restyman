@@ -1,4 +1,5 @@
-import { createResource, setAxiosFactory } from './resource'
+import createResource from './createResource'
+import { setAxiosFactory } from './axiosFactory'
 
 export {
   setAxiosFactory
