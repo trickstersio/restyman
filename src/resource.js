@@ -1,44 +1,39 @@
-import resourceItem from './resourceItem'
+import { createEndpoint } from './endpoint'
 
-const resource = ({ path, createRequester }) => {
-  let prefix = ''
-  let subresources = {}
-
-  const methods = []
-  const instanceMethods = {}
-
-  const resource = (id) => resourceItem({
-    id,
-    path,
-    subresources,
-    instanceMethods,
-    createRequester: createRequester
-  })
-
-  resource.getPath = () => `${prefix}${path}`
-
-  let requester = createRequester({ path: resource.getPath() })
-
-  resource.setPrefix = (pfx) => {
-    prefix = `${pfx}/`
-    requester = createRequester({ path: resource.getPath() })
-  }
-
-  resource.subresource = (newSubsresources) => {
-    subresources = { ...subresources, ...newSubsresources }
-  }
-
-  resource.collection = (methodName, method) => {
-    resource[methodName] = function() {
-      return method(requester, ...arguments)
-    }
-  }
-
-  resource.member = (methodName, method) => {
-    instanceMethods[methodName] = method
-  }
-
-  return resource
+let axiosFactory = null
+export const setAxiosFactory = (af) => {
+  axiosFactory = af
 }
 
-export default resource
+export const createResource = ({ path }) => {
+  const endpoints = {}
+  const memberEndpoints = {}
+
+  const r = (id) => {
+    const member = createResource({ path: `${path}/${id}` })
+    for (let code in memberEndpoints) {
+      member.assignEndpoint(code, memberEndpoints[code])
+    }
+    return member
+  }
+
+  r.assignEndpoint = (code, endpoint) => {
+    endpoints[code] = endpoint
+    r[code] = function () {
+      const axios = axiosFactory(path)
+      return endpoints[code].execute({ axios }, ...arguments)
+    }
+    return endpoints[code]
+  }
+
+  r.collection = (code) => {
+    return r.assignEndpoint(code, createEndpoint())
+  }
+
+  r.member = (code) => {
+    memberEndpoints[code] = createEndpoint()
+    return memberEndpoints[code]
+  }
+
+  return r
+}
