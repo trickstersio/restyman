@@ -1,4 +1,4 @@
-import { getAxiosFactory } from './axiosFactory'
+import { getReqFactory } from './reqFactory'
 import createEndpoint from './createEndpoint'
 
 const createResource = ({ path }) => {
@@ -21,13 +21,11 @@ const createResource = ({ path }) => {
       return resource
     }
 
-    r.axios = getAxiosFactory()(path)
-
     r.getPath = () => path
 
     r.assignEndpoint = function (code, endpoint) {
       r[code] = function () {
-        const { axios } = this
+        const axios = getReqFactory()(this.getPath())
         return endpoint.execute({ axios }, ...arguments)
       }
       return endpoint

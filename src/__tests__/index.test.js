@@ -1,27 +1,22 @@
 /* eslint-env jest */
 import axios from 'axios'
 import moxios from 'moxios'
-import createResource, { setAxiosFactory } from '..'
-
-setAxiosFactory((path) => (
-  axios.create({
-    baseURL: `/${path}`
-  })
-))
+import createResource, { setReqFactory } from '..'
 
 describe('restyman', () => {
   let companies, users, comments
 
   beforeEach(() => {
-    moxios.install()
-
     companies = createResource({ path: 'companies' })
     users = createResource({ path: 'users' })
     comments = createResource({ path: 'comments' })
   })
 
-  afterEach(() => {
-    moxios.uninstall()
+  it('has no request prodivers', () => {
+    companies.collection('index')
+      .request(({ axios }, params = {}) => axios.get('/', { params }))
+
+    expect(() => companies.index()).toThrow()
   })
 
   describe('getPath', () => {
@@ -55,7 +50,19 @@ describe('restyman', () => {
     })
   })
 
-  describe('request', () => {
+  describe('axios', () => {
+    beforeEach(() => {
+      moxios.install()
+
+      setReqFactory((path) => (
+        axios.create({ baseURL: `/${path}` })
+      ))
+    })
+
+    afterEach(() => {
+      moxios.uninstall()
+    })
+
     it('executes correct collection request', () => {
       companies.collection('index')
         .request(({ axios }, params = {}) => axios.get('/', { params }))

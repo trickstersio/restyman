@@ -1,8 +1,8 @@
 import createResource from './createResource'
-import { setAxiosFactory } from './axiosFactory'
+import { setReqFactory } from './reqFactory'
 
 export {
-  setAxiosFactory
+  setReqFactory
 }
 
 export default createResource
