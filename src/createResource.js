@@ -25,8 +25,8 @@ const createResource = ({ path }) => {
 
     r.assignEndpoint = function (code, endpoint) {
       r[code] = function () {
-        const axios = getReqFactory()(this.getPath())
-        return endpoint.execute({ axios }, ...arguments)
+        const req = getReqFactory()(this.getPath())
+        return endpoint.execute({ req }, ...arguments)
       }
       return endpoint
     }

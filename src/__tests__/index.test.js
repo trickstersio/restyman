@@ -1,7 +1,8 @@
 /* eslint-env jest */
+import createResource, { setReqFactory } from '..'
 import axios from 'axios'
 import moxios from 'moxios'
-import createResource, { setReqFactory } from '..'
+import fetchMock from 'fetch-mock'
 
 describe('restyman', () => {
   let companies, users, comments
@@ -14,7 +15,7 @@ describe('restyman', () => {
 
   it('has no request prodivers', () => {
     companies.collection('index')
-      .request(({ axios }, params = {}) => axios.get('/', { params }))
+      .request(({ req }, params = {}) => req.get('/', { params }))
 
     expect(() => companies.index()).toThrow()
   })
@@ -50,7 +51,7 @@ describe('restyman', () => {
     })
   })
 
-  describe('axios', () => {
+  describe('provider:axios', () => {
     beforeEach(() => {
       moxios.install()
 
@@ -65,7 +66,7 @@ describe('restyman', () => {
 
     it('executes correct collection request', () => {
       companies.collection('index')
-        .request(({ axios }, params = {}) => axios.get('/', { params }))
+        .request(({ req }, params = {}) => req.get('/', { params }))
 
       moxios.stubRequest(/\/companies.*/, { status: 200 })
 
@@ -78,7 +79,7 @@ describe('restyman', () => {
 
     it('executes correct member request', () => {
       companies.member('show')
-        .request(({ axios }) => axios.get('/'))
+        .request(({ req }) => req.get('/'))
 
       moxios.stubRequest(/\/companies\/\d+\//, { status: 200 })
 
@@ -92,7 +93,7 @@ describe('restyman', () => {
     it('executes correct subresource collection request', () => {
       companies.subresources({ users })
       users.collection('index')
-        .request(({ axios }, params = {}) => axios.get('/', { params }))
+        .request(({ req }, params = {}) => req.get('/', { params }))
 
       moxios.stubRequest(/\/companies\/\d+\/users.*/, { status: 200 })
 
@@ -100,6 +101,59 @@ describe('restyman', () => {
         .then((response) => {
           expect(response.status).toEqual(200)
           expect(response.request.url).toEqual('/companies/1/users/?search=John')
+        })
+    })
+  })
+
+  describe('provider:fetch', () => {
+    let fetch
+
+    beforeEach(() => {
+      fetch = fetchMock.sandbox()
+
+      setReqFactory((path) => (subpath, params) => (
+        fetch(`/${path}${subpath}`)
+      ))
+    })
+
+    afterEach(() => {
+      fetch.reset()
+    })
+
+    it('executes correct collection request', () => {
+      companies.collection('index')
+        .request(({ req }) => req('/'))
+
+      fetch.mock('/companies/', 200)
+
+      return companies.index()
+        .then((response) => {
+          expect(response.status).toEqual(200)
+        })
+    })
+
+    it('executes correct member request', () => {
+      companies.member('show')
+        .request(({ req }) => req('/'))
+
+      fetch.mock(/\/companies\/\d+\//, 200)
+
+      return companies(1).show()
+        .then((response) => {
+          expect(response.status).toEqual(200)
+        })
+    })
+
+    it('executes correct subresource collection request', () => {
+      companies.subresources({ users })
+      users.collection('index')
+        .request(({ req }) => req('/'))
+
+      fetch.mock(/\/companies\/\d+\/users\//, 200)
+
+      return companies(1).users.index()
+        .then((response) => {
+          expect(response.status).toEqual(200)
         })
     })
   })
