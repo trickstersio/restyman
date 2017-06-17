@@ -134,6 +134,30 @@ describe('restyman', () => {
         expect(external.data).toEqual('externalResourceResponse')
       })
     })
+
+    it('passes constructor parameters to requester', () => {
+      const countryAttributes = {
+        name: 'Russia'
+      }
+
+      const countries = createResource({
+        path: 'countries',
+        singular: 'country'
+      })
+
+      countries.collection('create')
+        .request(({ req, singular }, attributes) => req.post('/', { [singular]: attributes }))
+
+      moxios.stubRequest('/countries/', { status: 200 })
+
+      return countries.create(countryAttributes)
+        .then((response) => {
+          const data = JSON.parse(response.config.data)
+          expect(data).toEqual({
+            country: countryAttributes
+          })
+        })
+    })
   })
 
   describe('provider:fetch', () => {

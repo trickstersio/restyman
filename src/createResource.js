@@ -1,7 +1,7 @@
 import { getRequesterFactory } from './requesterFactory'
 import createEndpoint from './createEndpoint'
 
-const createResource = ({ path, requesterFactory }) => {
+const createResource = (parameters) => {
   let subresources = {}
   const memberEndpoints = {}
 
@@ -25,9 +25,9 @@ const createResource = ({ path, requesterFactory }) => {
 
     r.assignEndpoint = function (code, endpoint) {
       r[code] = function () {
-        const createRequester = requesterFactory || getRequesterFactory()
+        const createRequester = parameters.requesterFactory || getRequesterFactory()
         const req = createRequester(this.getPath())
-        return endpoint.execute({ req }, ...arguments)
+        return endpoint.execute({ req, ...parameters }, ...arguments)
       }
       return endpoint
     }
@@ -60,7 +60,7 @@ const createResource = ({ path, requesterFactory }) => {
     return r
   }
 
-  return createInstance(path)
+  return createInstance(parameters.path)
 }
 
 export default createResource
