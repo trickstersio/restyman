@@ -9,7 +9,7 @@ describe('restyman', () => {
 
   beforeEach(() => {
     companies = createResource({ path: 'companies' })
-    users = createResource({ path: 'users' })
+    users = createResource({ path: 'users', singular: 'user' })
     comments = createResource({ path: 'comments' })
   })
 
@@ -48,6 +48,15 @@ describe('restyman', () => {
       expect(companies(1).comments.getPath()).toEqual('companies/1/comments')
       expect(users(1).comments.getPath()).toEqual('users/1/comments')
       expect(comments.getPath()).toEqual('comments')
+    })
+
+    it('combines subresources correctly', () => {
+      companies.subresources({ users })
+      companies.subresources({ comments })
+
+      const company = companies(1)
+      expect(company.users.getPath()).toEqual('companies/1/users')
+      expect(company.comments.getPath()).toEqual('companies/1/comments')
     })
   })
 
@@ -152,9 +161,33 @@ describe('restyman', () => {
 
       return countries.create(countryAttributes)
         .then((response) => {
+          expect(response.status).toEqual(200)
+
           const data = JSON.parse(response.config.data)
           expect(data).toEqual({
             country: countryAttributes
+          })
+        })
+    })
+
+    it('keeps constructor parameters for subresources', () => {
+      const userAttributes = {
+        name: 'John'
+      }
+
+      companies.subresources({ users })
+      users.collection('create')
+        .request(({ req, singular }, attributes) => req.post('/', { [singular]: attributes }))
+
+      moxios.stubRequest(/\/companies\/\d+\/users\//, { status: 200 })
+
+      return companies(1).users.create(userAttributes)
+        .then((response) => {
+          expect(response.status).toEqual(200)
+
+          const data = JSON.parse(response.config.data)
+          expect(data).toEqual({
+            'user': userAttributes
           })
         })
     })

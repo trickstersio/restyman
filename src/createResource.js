@@ -53,8 +53,11 @@ const createResource = (parameters) => {
       return memberEndpoints[code]
     }
 
-    r.subresources = (_subresourses) => {
-      subresources = _subresourses
+    r.subresources = (_subresources) => {
+      subresources = {
+        ...subresources,
+        ..._subresources
+      }
     }
 
     return r
