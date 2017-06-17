@@ -1,5 +1,5 @@
 /* eslint-env jest */
-import createResource, { setReqFactory } from '..'
+import createResource, { setRequesterFactory } from '..'
 import axios from 'axios'
 import moxios from 'moxios'
 import fetchMock from 'fetch-mock'
@@ -55,7 +55,7 @@ describe('restyman', () => {
     beforeEach(() => {
       moxios.install()
 
-      setReqFactory((path) => (
+      setRequesterFactory((path) => (
         axios.create({ baseURL: `/${path}` })
       ))
     })
@@ -103,6 +103,37 @@ describe('restyman', () => {
           expect(response.request.url).toEqual('/companies/1/users/?search=John')
         })
     })
+
+    it('has ability to specify different request provider for concrete resource item', () => {
+      companies.collection('index')
+        .request(({ req }) => req.get('/'))
+
+      const externalRequesterFactory = (path) => (
+        axios.create({ baseURL: `http://external/${path}` })
+      )
+
+      const externalComments = createResource({
+        path: 'comments',
+        requesterFactory: externalRequesterFactory
+      })
+
+      externalComments.collection('index')
+        .request(({ req }) => req.get('/'))
+
+      moxios.stubRequest('/companies/', { status: 200, response: 'generalResourceResponse' })
+      moxios.stubRequest('http://external/comments/', { status: 200, response: 'externalResourceResponse' })
+
+      return Promise.all([
+        companies.index(),
+        externalComments.index()
+      ]).then(([ general, external ]) => {
+        expect(general.status).toEqual(200)
+        expect(general.data).toEqual('generalResourceResponse')
+
+        expect(external.status).toEqual(200)
+        expect(external.data).toEqual('externalResourceResponse')
+      })
+    })
   })
 
   describe('provider:fetch', () => {
@@ -111,7 +142,7 @@ describe('restyman', () => {
     beforeEach(() => {
       fetch = fetchMock.sandbox()
 
-      setReqFactory((path) => (subpath, params) => (
+      setRequesterFactory((path) => (subpath, params) => (
         fetch(`/${path}${subpath}`)
       ))
     })

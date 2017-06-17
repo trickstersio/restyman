@@ -1,11 +1,11 @@
-import { getReqFactory } from './reqFactory'
+import { getRequesterFactory } from './requesterFactory'
 import createEndpoint from './createEndpoint'
 
-const createResource = ({ path }) => {
+const createResource = ({ path, requesterFactory }) => {
   let subresources = {}
   const memberEndpoints = {}
 
-  const createMember = (path) => {
+  const createInstance = (path) => {
     const r = (id) => {
       const resourcePath = `${path}/${id}`
       const resource = createResource({ path: resourcePath })
@@ -25,14 +25,15 @@ const createResource = ({ path }) => {
 
     r.assignEndpoint = function (code, endpoint) {
       r[code] = function () {
-        const req = getReqFactory()(this.getPath())
+        const createRequester = requesterFactory || getRequesterFactory()
+        const req = createRequester(this.getPath())
         return endpoint.execute({ req }, ...arguments)
       }
       return endpoint
     }
 
     r.copyWithPrefix = function (prefix) {
-      const copy = createMember(`${prefix}${this.getPath()}`)
+      const copy = createInstance(`${prefix}${this.getPath()}`)
 
       for (let field in this) {
         if (!copy[field]) {
@@ -59,7 +60,7 @@ const createResource = ({ path }) => {
     return r
   }
 
-  return createMember(path)
+  return createInstance(path)
 }
 
 export default createResource

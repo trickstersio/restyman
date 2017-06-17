@@ -1,8 +1,4 @@
 import createResource from './createResource'
-import { setReqFactory } from './reqFactory'
-
-export {
-  setReqFactory
-}
+export { setRequesterFactory } from './requesterFactory'
 
 export default createResource
