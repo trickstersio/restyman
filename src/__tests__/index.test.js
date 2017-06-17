@@ -1,5 +1,5 @@
 /* eslint-env jest */
-import createResource, { setRequesterFactory } from '..'
+import createResource, { setRequesterFactory, methods } from '..'
 import axios from 'axios'
 import moxios from 'moxios'
 import fetchMock from 'fetch-mock'
@@ -190,6 +190,39 @@ describe('restyman', () => {
             'user': userAttributes
           })
         })
+    })
+
+    describe('methods', () => {
+      it('registers global collection method', () => {
+        methods.collection('index')
+          .request(({ req }, params = {}) => req.get('/', { params }))
+
+        const books = createResource({ path: 'books' })
+
+        moxios.stubRequest(/\/books.*/, { status: 200 })
+
+        return books.index({ order: 'asc' })
+          .then((response) => {
+            expect(response.status).toEqual(200)
+            expect(response.request.url).toEqual('/books/?order=asc')
+          })
+      })
+
+      it('registers global member method', () => {
+        methods.member('destroy')
+          .request(({ req }) => req.delete('/'))
+
+        const books = createResource({ path: 'books' })
+
+        moxios.stubRequest(/\/books\/\d+\//, { status: 200 })
+
+        return books(1).destroy()
+          .then((response) => {
+            expect(response.status).toEqual(200)
+            expect(response.config.method).toEqual('delete')
+            expect(response.request.url).toEqual('/books/1/')
+          })
+      })
     })
   })
 

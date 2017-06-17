@@ -1,4 +1,5 @@
 import { getRequesterFactory } from './requesterFactory'
+import { defineMethods } from './methods'
 import createEndpoint from './createEndpoint'
 
 const createResource = (parameters) => {
@@ -44,13 +45,13 @@ const createResource = (parameters) => {
       return copy
     }
 
-    r.collection = function (code) {
-      return this.assignEndpoint(code, createEndpoint())
+    r.collection = function (code, endpoint = createEndpoint()) {
+      return this.assignEndpoint(code, endpoint)
     }
 
-    r.member = (code) => {
-      memberEndpoints[code] = createEndpoint()
-      return memberEndpoints[code]
+    r.member = (code, endpoint = createEndpoint()) => {
+      memberEndpoints[code] = endpoint
+      return endpoint
     }
 
     r.subresources = (_subresources) => {
@@ -63,7 +64,11 @@ const createResource = (parameters) => {
     return r
   }
 
-  return createInstance(parameters.path)
+  const instance = createInstance(parameters.path)
+
+  defineMethods(instance)
+
+  return instance
 }
 
 export default createResource

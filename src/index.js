@@ -1,4 +1,10 @@
 import createResource from './createResource'
-export { setRequesterFactory } from './requesterFactory'
+import { setRequesterFactory } from './requesterFactory'
+import methods from './methods'
+
+export {
+  setRequesterFactory,
+  methods
+}
 
 export default createResource
