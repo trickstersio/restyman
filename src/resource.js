@@ -25,7 +25,7 @@ const resource = ({ path, createRequester }) => {
   }
 
   resource.subresource = (newSubsresources) => {
-    subsresources = { ...subsresources, ...newSubsresources }
+    subresources = { ...subresources, ...newSubsresources }
   }
 
   resource.collection = (methodName, method) => {
