@@ -10,6 +10,7 @@ const destExtension = `${isProduction ? '.min' : ''}.js`
 export default {
   entry: 'src/index.js',
   moduleName: 'restyman',
+  exports: 'named',
   targets: [
     { dest: `${destBase}${destExtension}`, format: 'cjs' }
   ],
