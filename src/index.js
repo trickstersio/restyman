@@ -3,8 +3,7 @@ import { setRequesterFactory } from './requesterFactory'
 import methods from './methods'
 
 export {
+  createResource,
   setRequesterFactory,
   methods
 }
-
-export default createResource

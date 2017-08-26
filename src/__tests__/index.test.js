@@ -1,8 +1,13 @@
 /* eslint-env jest */
-import createResource, { setRequesterFactory, methods } from '..'
+import { createResource, setRequesterFactory, methods } from '..'
 import axios from 'axios'
 import moxios from 'moxios'
 import fetchMock from 'fetch-mock'
+
+const axiosFactory = (path) => axios.create({ baseURL: `/${path}` })
+
+const fetch = fetchMock.sandbox()
+const fetchFactory = (path) => (subpath, params) => fetch(`/${path}${subpath}`)
 
 describe('restyman', () => {
   let companies, users, comments
@@ -63,57 +68,48 @@ describe('restyman', () => {
   describe('provider:axios', () => {
     beforeEach(() => {
       moxios.install()
-
-      setRequesterFactory((path) => (
-        axios.create({ baseURL: `/${path}` })
-      ))
+      setRequesterFactory(axiosFactory)
     })
 
     afterEach(() => {
       moxios.uninstall()
     })
 
-    it('executes correct collection request', () => {
+    it('executes correct collection request', async () => {
       companies.collection('index')
         .request(({ req }, params = {}) => req.get('/', { params }))
 
       moxios.stubRequest(/\/companies.*/, { status: 200 })
 
-      return companies.index({ order: 'desc' })
-        .then((response) => {
-          expect(response.status).toEqual(200)
-          expect(response.request.url).toEqual('/companies/?order=desc')
-        })
+      const response = await companies.index({ order: 'desc' })
+      expect(response.status).toEqual(200)
+      expect(response.request.url).toEqual('/companies/?order=desc')
     })
 
-    it('executes correct member request', () => {
+    it('executes correct member request', async () => {
       companies.member('show')
         .request(({ req }) => req.get('/'))
 
       moxios.stubRequest(/\/companies\/\d+\//, { status: 200 })
 
-      return companies(1).show()
-        .then((response) => {
-          expect(response.status).toEqual(200)
-          expect(response.request.url).toEqual('/companies/1/')
-        })
+      const response = await companies(1).show()
+      expect(response.status).toEqual(200)
+      expect(response.request.url).toEqual('/companies/1/')
     })
 
-    it('executes correct subresource collection request', () => {
+    it('executes correct subresource collection request', async () => {
       companies.subresources({ users })
       users.collection('index')
         .request(({ req }, params = {}) => req.get('/', { params }))
 
       moxios.stubRequest(/\/companies\/\d+\/users.*/, { status: 200 })
 
-      return companies(1).users.index({ search: 'John' })
-        .then((response) => {
-          expect(response.status).toEqual(200)
-          expect(response.request.url).toEqual('/companies/1/users/?search=John')
-        })
+      const response = await companies(1).users.index({ search: 'John' })
+      expect(response.status).toEqual(200)
+      expect(response.request.url).toEqual('/companies/1/users/?search=John')
     })
 
-    it('has ability to specify different request provider for concrete resource item', () => {
+    it('has ability to specify different request provider for concrete resource item', async () => {
       companies.collection('index')
         .request(({ req }) => req.get('/'))
 
@@ -132,19 +128,16 @@ describe('restyman', () => {
       moxios.stubRequest('/companies/', { status: 200, response: 'generalResourceResponse' })
       moxios.stubRequest('http://external/comments/', { status: 200, response: 'externalResourceResponse' })
 
-      return Promise.all([
-        companies.index(),
-        externalComments.index()
-      ]).then(([ general, external ]) => {
-        expect(general.status).toEqual(200)
-        expect(general.data).toEqual('generalResourceResponse')
+      const general = await companies.index()
+      expect(general.status).toEqual(200)
+      expect(general.data).toEqual('generalResourceResponse')
 
-        expect(external.status).toEqual(200)
-        expect(external.data).toEqual('externalResourceResponse')
-      })
+      const external = await externalComments.index()
+      expect(external.status).toEqual(200)
+      expect(external.data).toEqual('externalResourceResponse')
     })
 
-    it('passes constructor parameters to requester', () => {
+    it('passes constructor parameters to requester', async () => {
       const countryAttributes = {
         name: 'Russia'
       }
@@ -159,18 +152,16 @@ describe('restyman', () => {
 
       moxios.stubRequest('/countries/', { status: 200 })
 
-      return countries.create(countryAttributes)
-        .then((response) => {
-          expect(response.status).toEqual(200)
+      const response = await countries.create(countryAttributes)
+      expect(response.status).toEqual(200)
 
-          const data = JSON.parse(response.config.data)
-          expect(data).toEqual({
-            country: countryAttributes
-          })
-        })
+      const data = JSON.parse(response.config.data)
+      expect(data).toEqual({
+        country: countryAttributes
+      })
     })
 
-    it('keeps constructor parameters for subresources', () => {
+    it('keeps constructor parameters for subresources', async () => {
       const userAttributes = {
         name: 'John'
       }
@@ -181,19 +172,17 @@ describe('restyman', () => {
 
       moxios.stubRequest(/\/companies\/\d+\/users\//, { status: 200 })
 
-      return companies(1).users.create(userAttributes)
-        .then((response) => {
-          expect(response.status).toEqual(200)
+      const response = await companies(1).users.create(userAttributes)
+      expect(response.status).toEqual(200)
 
-          const data = JSON.parse(response.config.data)
-          expect(data).toEqual({
-            'user': userAttributes
-          })
-        })
+      const data = JSON.parse(response.config.data)
+      expect(data).toEqual({
+        'user': userAttributes
+      })
     })
 
     describe('methods', () => {
-      it('registers global collection method', () => {
+      it('registers global collection method', async () => {
         methods.collection('index')
           .request(({ req }, params = {}) => req.get('/', { params }))
 
@@ -201,14 +190,12 @@ describe('restyman', () => {
 
         moxios.stubRequest(/\/books.*/, { status: 200 })
 
-        return books.index({ order: 'asc' })
-          .then((response) => {
-            expect(response.status).toEqual(200)
-            expect(response.request.url).toEqual('/books/?order=asc')
-          })
+        const response = await books.index({ order: 'asc' })
+        expect(response.status).toEqual(200)
+        expect(response.request.url).toEqual('/books/?order=asc')
       })
 
-      it('registers global member method', () => {
+      it('registers global member method', async () => {
         methods.member('destroy')
           .request(({ req }) => req.delete('/'))
 
@@ -216,66 +203,52 @@ describe('restyman', () => {
 
         moxios.stubRequest(/\/books\/\d+\//, { status: 200 })
 
-        return books(1).destroy()
-          .then((response) => {
-            expect(response.status).toEqual(200)
-            expect(response.config.method).toEqual('delete')
-            expect(response.request.url).toEqual('/books/1/')
-          })
+        const response = await books(1).destroy()
+        expect(response.status).toEqual(200)
+        expect(response.config.method).toEqual('delete')
+        expect(response.request.url).toEqual('/books/1/')
       })
     })
   })
 
   describe('provider:fetch', () => {
-    let fetch
-
-    beforeEach(() => {
-      fetch = fetchMock.sandbox()
-
-      setRequesterFactory((path) => (subpath, params) => (
-        fetch(`/${path}${subpath}`)
-      ))
-    })
+    beforeEach(() => setRequesterFactory(fetchFactory))
 
     afterEach(() => {
       fetch.reset()
     })
 
-    it('executes correct collection request', () => {
+    it('executes correct collection request', async () => {
       companies.collection('index')
         .request(({ req }) => req('/'))
 
       fetch.mock('/companies/', 200)
 
-      return companies.index()
-        .then((response) => {
-          expect(response.status).toEqual(200)
-        })
+      const response = await companies.index()
+      expect(response.status).toEqual(200)
     })
 
-    it('executes correct member request', () => {
+    it('executes correct member request', async () => {
       companies.member('show')
         .request(({ req }) => req('/'))
 
       fetch.mock(/\/companies\/\d+\//, 200)
 
-      return companies(1).show()
-        .then((response) => {
-          expect(response.status).toEqual(200)
-        })
+      const response = await companies(1).show()
+      expect(response.status).toEqual(200)
     })
 
-    it('executes correct subresource collection request', () => {
+    it('executes correct subresource collection request', async () => {
       companies.subresources({ users })
       users.collection('index')
         .request(({ req }) => req('/'))
 
       fetch.mock(/\/companies\/\d+\/users\//, 200)
 
-      return companies(1).users.index()
-        .then((response) => {
-          expect(response.status).toEqual(200)
-        })
+      companies(1).users.index()
+
+      const response = await companies(1).users.index()
+      expect(response.status).toEqual(200)
     })
   })
 })
