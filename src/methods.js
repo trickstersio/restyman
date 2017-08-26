@@ -1,5 +1,5 @@
 import { createEndpoint } from './createEndpoint'
-import { forOwn } from './helpers'
+import { NAMESPACES, forOwn } from './utils'
 
 const methodsMap = {}
 
@@ -14,7 +14,7 @@ export const defineMethods = (instance) => {
   return instance
 }
 
-export const methods = {
-  collection: (code) => registerMethod('collection', code),
-  member: (code) => registerMethod('member', code)
-}
+export const methods = NAMESPACES.reduce((result, namespace) => {
+  result[namespace] = (code) => registerMethod(namespace, code)
+  return result
+}, {})

@@ -1,7 +1,7 @@
 import { config } from './config'
 import { defineMethods } from './methods'
 import { createEndpoint } from './createEndpoint'
-import { forOwn } from './helpers'
+import { NAMESPACES, forOwn } from './utils'
 
 export const createResource = (parameters) => {
   const resources = {}
@@ -19,11 +19,16 @@ export const createResource = (parameters) => {
 
   const subresources = (_resources) => Object.assign(resources, _resources)
 
+  const define = function (enhance) {
+    enhance(NAMESPACES.reduce(_definition(this), {}))
+  }
+
   const _create = (path) => {
     const API = {
       collection,
       member,
       subresources,
+      define,
       getPath: () => path
     }
     return Object.assign((id) => _createResource(`${path}/${id}`), API)
@@ -38,6 +43,11 @@ export const createResource = (parameters) => {
       resource[code] = _assignEndpoint(endpoint)
     })
     return resource
+  }
+
+  const _definition = (resource) => (result, namespace) => {
+    result[namespace] = (code, request) => resource[namespace](code).request(request)
+    return result
   }
 
   const _assignEndpoint = (endpoint) => function () {

@@ -186,6 +186,52 @@ describe('restyman', () => {
       })
     })
 
+    describe('context syntax', () => {
+      it('registers 2 collection methods', async () => {
+        const books = createResource({ path: 'books' })
+        books.define(({ collection }) => {
+          collection('index', ({ req }, params = {}) => req.get('/', { params }))
+          collection('create', ({ req }, data = {}) => req.post('/', data))
+        })
+
+        moxios.stubRequest(/\/books.*/, { status: 200 })
+
+        const indexResponse = await books.index({ order: 'asc' })
+        expect(indexResponse.status).toEqual(200)
+        expect(indexResponse.request.url).toEqual('/books/?order=asc')
+
+        const createResponse = await books.create({ title: 'Abc' })
+        expect(createResponse.status).toEqual(200)
+        expect(createResponse.request.url).toEqual('/books/')
+        expect(createResponse.request.config.method).toEqual('post')
+      })
+
+      it('registers 3 member methods', async () => {
+        const books = createResource({ path: 'books' })
+        books.define(({ member }) => {
+          member('show', ({ req }) => req.get('/'))
+          member('update', ({ req }, data = {}) => req.post('/', data))
+          member('delete', ({ req }) => req.delete('/'))
+        })
+
+        moxios.stubRequest(/\/books.*/, { status: 200 })
+
+        const showResponse = await books(1).show()
+        expect(showResponse.status).toEqual(200)
+        expect(showResponse.request.url).toEqual('/books/1/')
+
+        const updateResponse = await books(1).update({ title: 'Abc' })
+        expect(updateResponse.status).toEqual(200)
+        expect(updateResponse.request.url).toEqual('/books/1/')
+        expect(updateResponse.request.config.method).toEqual('post')
+
+        const deleteResponse = await books(1).delete()
+        expect(deleteResponse.status).toEqual(200)
+        expect(deleteResponse.request.url).toEqual('/books/1/')
+        expect(deleteResponse.request.config.method).toEqual('delete')
+      })
+    })
+
     describe('methods', () => {
       it('registers global collection method', async () => {
         methods.collection('index')
