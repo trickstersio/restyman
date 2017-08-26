@@ -1,5 +1,5 @@
 /* eslint-env jest */
-import { createResource, setRequesterFactory, methods } from '..'
+import { createResource, configure, methods } from '..'
 import axios from 'axios'
 import moxios from 'moxios'
 import fetchMock from 'fetch-mock'
@@ -66,9 +66,14 @@ describe('restyman', () => {
   })
 
   describe('provider:axios', () => {
+    beforeAll(() => {
+      configure({
+        factory: axiosFactory
+      })
+    })
+
     beforeEach(() => {
       moxios.install()
-      setRequesterFactory(axiosFactory)
     })
 
     afterEach(() => {
@@ -113,13 +118,13 @@ describe('restyman', () => {
       companies.collection('index')
         .request(({ req }) => req.get('/'))
 
-      const externalRequesterFactory = (path) => (
+      const externalFactory = (path) => (
         axios.create({ baseURL: `http://external/${path}` })
       )
 
       const externalComments = createResource({
         path: 'comments',
-        requesterFactory: externalRequesterFactory
+        factory: externalFactory
       })
 
       externalComments.collection('index')
@@ -212,7 +217,11 @@ describe('restyman', () => {
   })
 
   describe('provider:fetch', () => {
-    beforeEach(() => setRequesterFactory(fetchFactory))
+    beforeAll(() => {
+      configure({
+        factory: fetchFactory
+      })
+    })
 
     afterEach(() => {
       fetch.reset()
@@ -232,7 +241,7 @@ describe('restyman', () => {
       companies.member('show')
         .request(({ req }) => req('/'))
 
-      fetch.mock(/\/companies\/\d+\//, 200)
+      fetch.mock(/\/companies\/\d+\/$/, 200)
 
       const response = await companies(1).show()
       expect(response.status).toEqual(200)
@@ -243,9 +252,7 @@ describe('restyman', () => {
       users.collection('index')
         .request(({ req }) => req('/'))
 
-      fetch.mock(/\/companies\/\d+\/users\//, 200)
-
-      companies(1).users.index()
+      fetch.mock(/\/companies\/\d+\/users\/$/, 200)
 
       const response = await companies(1).users.index()
       expect(response.status).toEqual(200)

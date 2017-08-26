@@ -1,4 +1,4 @@
-import createEndpoint from './createEndpoint'
+import { createEndpoint } from './createEndpoint'
 
 const methodMapping = {}
 
@@ -15,7 +15,7 @@ export const defineMethods = (instance) => {
   }
 }
 
-export default {
+export const methods = {
   collection: (code) => registerMethod('collection', code),
   member: (code) => registerMethod('member', code)
 }
