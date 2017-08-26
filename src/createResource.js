@@ -1,71 +1,55 @@
 import { config } from './config'
 import { defineMethods } from './methods'
 import { createEndpoint } from './createEndpoint'
+import { forOwn } from './helpers'
 
 export const createResource = (parameters) => {
-  let subresources = {}
+  const resources = {}
   const memberEndpoints = {}
 
-  const createInstance = (path) => {
-    const r = (id) => {
-      const resourcePath = `${path}/${id}`
-      const resource = createResource({ path: resourcePath })
-
-      for (let code in memberEndpoints) {
-        resource.assignEndpoint(code, memberEndpoints[code])
-      }
-
-      for (let code in subresources) {
-        resource[code] = subresources[code].copyWithPrefix(`${resourcePath}/`)
-      }
-
-      return resource
-    }
-
-    r.getPath = () => path
-
-    r.assignEndpoint = function (code, endpoint) {
-      r[code] = function () {
-        const req = (parameters.factory || config.factory)(this.getPath())
-        return endpoint.execute({ req, ...parameters }, ...arguments)
-      }
-      return endpoint
-    }
-
-    r.copyWithPrefix = function (prefix) {
-      const copy = createInstance(`${prefix}${this.getPath()}`)
-
-      for (let field in this) {
-        if (!copy[field]) {
-          copy[field] = this[field]
-        }
-      }
-
-      return copy
-    }
-
-    r.collection = function (code, endpoint = createEndpoint()) {
-      return this.assignEndpoint(code, endpoint)
-    }
-
-    r.member = (code, endpoint = createEndpoint()) => {
-      memberEndpoints[code] = endpoint
-      return endpoint
-    }
-
-    r.subresources = (_subresources) => {
-      subresources = {
-        ...subresources,
-        ..._subresources
-      }
-    }
-
-    return r
+  const collection = function (code, endpoint = createEndpoint()) {
+    this[code] = _assignEndpoint(endpoint)
+    return endpoint
   }
 
-  const instance = createInstance(parameters.path)
+  const member = (code, endpoint = createEndpoint()) => {
+    memberEndpoints[code] = endpoint
+    return endpoint
+  }
 
-  defineMethods(instance)
+  const subresources = (_resources) => Object.assign(resources, _resources)
 
-  return instance
+  const _create = (path) => {
+    const API = {
+      collection,
+      member,
+      subresources,
+      getPath: () => path
+    }
+    return Object.assign((id) => _createResource(`${path}/${id}`), API)
+  }
+
+  const _createResource = (path) => {
+    const resource = createResource({ path })
+    forOwn(resources, (sub, code) => {
+      resource[code] = _copyWithPrefix(sub, resource.getPath())
+    })
+    forOwn(memberEndpoints, (endpoint, code) => {
+      resource[code] = _assignEndpoint(endpoint)
+    })
+    return resource
+  }
+
+  const _assignEndpoint = (endpoint) => function () {
+    const req = (parameters.factory || config.factory)(this.getPath())
+    return endpoint.execute({ req, ...parameters }, ...arguments)
+  }
+
+  const _copyWithPrefix = function (resource, prefix) {
+    const copy = _create(`${prefix}/${resource.getPath()}`)
+    forOwn(resource, (v, k) => !copy[k] && (copy[k] = v))
+    return copy
+  }
+
+  return defineMethods(_create(parameters.path))
 }

@@ -1,18 +1,17 @@
 import { createEndpoint } from './createEndpoint'
+import { forOwn } from './helpers'
 
-const methodMapping = {}
+const methodsMap = {}
 
 const registerMethod = (scope, code) => {
   const endpoint = createEndpoint()
-  methodMapping[code] = { scope, endpoint }
+  methodsMap[code] = { scope, endpoint }
   return endpoint
 }
 
 export const defineMethods = (instance) => {
-  for (let code in methodMapping) {
-    const { scope, endpoint } = methodMapping[code]
-    instance[scope](code, endpoint)
-  }
+  forOwn(methodsMap, ({ scope, endpoint }, code) => instance[scope](code, endpoint))
+  return instance
 }
 
 export const methods = {
