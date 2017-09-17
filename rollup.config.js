@@ -8,11 +8,11 @@ const destBase = 'dist/restyman'
 const destExtension = `${isProduction ? '.min' : ''}.js`
 
 export default {
-  entry: 'src/index.js',
-  moduleName: 'restyman',
+  input: 'src/index.js',
+  name: 'restyman',
   exports: 'named',
-  targets: [
-    { dest: `${destBase}${destExtension}`, format: 'cjs' }
+  output: [
+    { file: `${destBase}${destExtension}`, format: 'cjs' }
   ],
   plugins: [
     babel({
