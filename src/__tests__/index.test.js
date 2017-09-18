@@ -1,16 +1,57 @@
 /* eslint-env jest */
 import { createResource, configure, methods } from '..'
 import axios from 'axios'
-import moxios from 'moxios'
-import fetchMock from 'fetch-mock'
+import fetch from 'node-fetch'
 
-const axiosFactory = (path) => axios.create({ baseURL: `/${path}` })
+import jsonServer from 'json-server'
+import killable from 'killable'
 
-const fetch = fetchMock.sandbox()
-const fetchFactory = (path) => (subpath, params) => fetch(`/${path}${subpath}`)
+const JSON_PORT = 30001
+const EXTERNAL_JSON_PORT = 30002
+
+const url = (path) => `http://localhost:${JSON_PORT}/${path}`
+const externalUrl = (path) => `http://localhost:${EXTERNAL_JSON_PORT}/${path}`
+const createServer = (port, db) => {
+  const server = jsonServer.create()
+  server.use(jsonServer.defaults())
+  server.use(jsonServer.router(db))
+  const app = server.listen(port)
+  killable(app)
+  return app
+}
+
+const axiosFactory = (path) => axios.create({ baseURL: url(path) })
+const externalFactory = (path) => axios.create({ baseURL: externalUrl(path) })
+const fetchFactory = (path) => (subpath, params) => fetch(url(`${path}${subpath}`))
 
 describe('restyman', () => {
-  let companies, users, comments
+  let server, expernalServer, companies, users, comments
+
+  beforeAll(() => {
+    server = createServer(JSON_PORT, {
+      companies: [
+        { id: 1, title: 'Horns' },
+        { id: 2, title: 'Hooves' }
+      ],
+      users: [
+        { id: 1, name: 'John', companyId: 1 }
+      ],
+      countries: [],
+      books: [
+        { id: 1, title: 'Javascript Ninja' },
+        { id: 2, title: 'Gone with the Wind' }
+      ]
+    })
+
+    expernalServer = createServer(EXTERNAL_JSON_PORT, {
+      comments: []
+    })
+  })
+
+  afterAll(() => {
+    server.kill()
+    expernalServer.kill()
+  })
 
   beforeEach(() => {
     companies = createResource({ path: 'companies' })
@@ -72,34 +113,23 @@ describe('restyman', () => {
       })
     })
 
-    beforeEach(() => {
-      moxios.install()
-    })
-
-    afterEach(() => {
-      moxios.uninstall()
-    })
-
     it('executes correct collection request', async () => {
       companies.collection('index')
         .request(({ req }, params = {}) => req.get('/', { params }))
 
-      moxios.stubRequest(/\/companies.*/, { status: 200 })
-
-      const response = await companies.index({ order: 'desc' })
-      expect(response.status).toEqual(200)
-      expect(response.request.url).toEqual('/companies/?order=desc')
+      const { status, config } = await companies.index({ order: 'desc' })
+      expect(status).toEqual(200)
+      expect(config.url).toEqual(url('companies/'))
+      expect(config.params).toEqual({ order: 'desc' })
     })
 
     it('executes correct member request', async () => {
       companies.member('show')
         .request(({ req }) => req.get('/'))
 
-      moxios.stubRequest(/\/companies\/\d+\//, { status: 200 })
-
-      const response = await companies(1).show()
-      expect(response.status).toEqual(200)
-      expect(response.request.url).toEqual('/companies/1/')
+      const { status, config } = await companies(1).show()
+      expect(status).toEqual(200)
+      expect(config.url).toEqual(url('companies/1/'))
     })
 
     it('executes correct subresource collection request', async () => {
@@ -107,20 +137,15 @@ describe('restyman', () => {
       users.collection('index')
         .request(({ req }, params = {}) => req.get('/', { params }))
 
-      moxios.stubRequest(/\/companies\/\d+\/users.*/, { status: 200 })
-
-      const response = await companies(1).users.index({ search: 'John' })
-      expect(response.status).toEqual(200)
-      expect(response.request.url).toEqual('/companies/1/users/?search=John')
+      const { status, config } = await companies(1).users.index({ search: 'John' })
+      expect(status).toEqual(200)
+      expect(config.url).toEqual(url('companies/1/users/'))
+      expect(config.params).toEqual({ search: 'John' })
     })
 
     it('has ability to specify different request provider for concrete resource item', async () => {
       companies.collection('index')
         .request(({ req }) => req.get('/'))
-
-      const externalFactory = (path) => (
-        axios.create({ baseURL: `http://external/${path}` })
-      )
 
       const externalComments = createResource({
         path: 'comments',
@@ -130,16 +155,13 @@ describe('restyman', () => {
       externalComments.collection('index')
         .request(({ req }) => req.get('/'))
 
-      moxios.stubRequest('/companies/', { status: 200, response: 'generalResourceResponse' })
-      moxios.stubRequest('http://external/comments/', { status: 200, response: 'externalResourceResponse' })
-
       const general = await companies.index()
       expect(general.status).toEqual(200)
-      expect(general.data).toEqual('generalResourceResponse')
+      expect(general.config.url).toEqual(url('companies/'))
 
       const external = await externalComments.index()
       expect(external.status).toEqual(200)
-      expect(external.data).toEqual('externalResourceResponse')
+      expect(external.config.url).toEqual(externalUrl('comments/'))
     })
 
     it('passes constructor parameters to requester', async () => {
@@ -155,13 +177,9 @@ describe('restyman', () => {
       countries.collection('create')
         .request(({ req, singular }, attributes) => req.post('/', { [singular]: attributes }))
 
-      moxios.stubRequest('/countries/', { status: 200 })
-
-      const response = await countries.create(countryAttributes)
-      expect(response.status).toEqual(200)
-
-      const data = JSON.parse(response.config.data)
-      expect(data).toEqual({
+      const { status, config } = await countries.create(countryAttributes)
+      expect(status).toEqual(201)
+      expect(JSON.parse(config.data)).toEqual({
         country: countryAttributes
       })
     })
@@ -175,60 +193,71 @@ describe('restyman', () => {
       users.collection('create')
         .request(({ req, singular }, attributes) => req.post('/', { [singular]: attributes }))
 
-      moxios.stubRequest(/\/companies\/\d+\/users\//, { status: 200 })
-
-      const response = await companies(1).users.create(userAttributes)
-      expect(response.status).toEqual(200)
-
-      const data = JSON.parse(response.config.data)
-      expect(data).toEqual({
+      const { status, config } = await companies(1).users.create(userAttributes)
+      expect(status).toEqual(201)
+      expect(JSON.parse(config.data)).toEqual({
         'user': userAttributes
       })
     })
 
     describe('context syntax', () => {
-      it('registers 2 collection methods', async () => {
-        const books = createResource({ path: 'books' })
-        books.define(({ collection }) => {
-          collection('index', ({ req }, params = {}) => req.get('/', { params }))
-          collection('create', ({ req }, data = {}) => req.post('/', data))
+      describe('registers 2 collection methods', () => {
+        let books
+
+        beforeAll(() => {
+          books = createResource({ path: 'books' })
+          books.define(({ collection }) => {
+            collection('index', ({ req }, params = {}) => req.get('/', { params }))
+            collection('create', ({ req }, data = {}) => req.post('/', data))
+          })
         })
 
-        moxios.stubRequest(/\/books.*/, { status: 200 })
+        it('executes index method', async () => {
+          const { status, config } = await books.index({ order: 'asc' })
+          expect(status).toEqual(200)
+          expect(config.url).toEqual(url('books/'))
+          expect(config.params).toEqual({ order: 'asc' })
+        })
 
-        const indexResponse = await books.index({ order: 'asc' })
-        expect(indexResponse.status).toEqual(200)
-        expect(indexResponse.request.url).toEqual('/books/?order=asc')
-
-        const createResponse = await books.create({ title: 'Abc' })
-        expect(createResponse.status).toEqual(200)
-        expect(createResponse.request.url).toEqual('/books/')
-        expect(createResponse.request.config.method).toEqual('post')
+        it('executes create method', async () => {
+          const { status, config } = await books.create({ title: 'Abc' })
+          expect(status).toEqual(201)
+          expect(config.url).toEqual(url('books/'))
+          expect(config.method).toEqual('post')
+        })
       })
 
-      it('registers 3 member methods', async () => {
-        const books = createResource({ path: 'books' })
-        books.define(({ member }) => {
-          member('show', ({ req }) => req.get('/'))
-          member('update', ({ req }, data = {}) => req.post('/', data))
-          member('delete', ({ req }) => req.delete('/'))
+      describe('registers 3 member methods', () => {
+        let books
+
+        beforeAll(() => {
+          books = createResource({ path: 'books' })
+          books.define(({ member }) => {
+            member('show', ({ req }) => req.get('/'))
+            member('update', ({ req }, data = {}) => req.patch('/', data))
+            member('destroy', ({ req }) => req.delete('/'))
+          })
         })
 
-        moxios.stubRequest(/\/books.*/, { status: 200 })
+        it('executes show method', async () => {
+          const { status, config } = await books(1).show()
+          expect(status).toEqual(200)
+          expect(config.url).toEqual(url('books/1/'))
+        })
 
-        const showResponse = await books(1).show()
-        expect(showResponse.status).toEqual(200)
-        expect(showResponse.request.url).toEqual('/books/1/')
+        it('executes update method', async () => {
+          const { status, config } = await books(1).update({ title: 'Abc' })
+          expect(status).toEqual(200)
+          expect(config.url).toEqual(url('books/1/'))
+          expect(config.method).toEqual('patch')
+        })
 
-        const updateResponse = await books(1).update({ title: 'Abc' })
-        expect(updateResponse.status).toEqual(200)
-        expect(updateResponse.request.url).toEqual('/books/1/')
-        expect(updateResponse.request.config.method).toEqual('post')
-
-        const deleteResponse = await books(1).delete()
-        expect(deleteResponse.status).toEqual(200)
-        expect(deleteResponse.request.url).toEqual('/books/1/')
-        expect(deleteResponse.request.config.method).toEqual('delete')
+        it('executes delete method', async () => {
+          const { status, config } = await books(1).destroy()
+          expect(status).toEqual(200)
+          expect(config.url).toEqual(url('books/1/'))
+          expect(config.method).toEqual('delete')
+        })
       })
     })
 
@@ -239,11 +268,10 @@ describe('restyman', () => {
 
         const books = createResource({ path: 'books' })
 
-        moxios.stubRequest(/\/books.*/, { status: 200 })
-
-        const response = await books.index({ order: 'asc' })
-        expect(response.status).toEqual(200)
-        expect(response.request.url).toEqual('/books/?order=asc')
+        const { status, config } = await books.index({ order: 'asc' })
+        expect(status).toEqual(200)
+        expect(config.url).toEqual(url('books/'))
+        expect(config.params).toEqual({ order: 'asc' })
       })
 
       it('registers global member method', async () => {
@@ -252,12 +280,10 @@ describe('restyman', () => {
 
         const books = createResource({ path: 'books' })
 
-        moxios.stubRequest(/\/books\/\d+\//, { status: 200 })
-
-        const response = await books(1).destroy()
-        expect(response.status).toEqual(200)
-        expect(response.config.method).toEqual('delete')
-        expect(response.request.url).toEqual('/books/1/')
+        const { status, config } = await books(2).destroy()
+        expect(status).toEqual(200)
+        expect(config.url).toEqual(url('books/2/'))
+        expect(config.method).toEqual('delete')
       })
     })
   })
@@ -269,25 +295,17 @@ describe('restyman', () => {
       })
     })
 
-    afterEach(() => {
-      fetch.reset()
-    })
-
     it('executes correct collection request', async () => {
       companies.collection('index')
         .request(({ req }) => req('/'))
 
-      fetch.mock('/companies/', 200)
-
-      const response = await companies.index()
-      expect(response.status).toEqual(200)
+      const { status } = await companies.index()
+      expect(status).toEqual(200)
     })
 
     it('executes correct member request', async () => {
       companies.member('show')
         .request(({ req }) => req('/'))
-
-      fetch.mock(/\/companies\/\d+\/$/, 200)
 
       const response = await companies(1).show()
       expect(response.status).toEqual(200)
@@ -297,8 +315,6 @@ describe('restyman', () => {
       companies.subresources({ users })
       users.collection('index')
         .request(({ req }) => req('/'))
-
-      fetch.mock(/\/companies\/\d+\/users\/$/, 200)
 
       const response = await companies(1).users.index()
       expect(response.status).toEqual(200)
