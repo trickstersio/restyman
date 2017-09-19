@@ -12,23 +12,11 @@ export default {
   name: 'restyman',
   exports: 'named',
   output: [
-    { file: `${destBase}${destExtension}`, format: 'cjs' }
+    { file: `${destBase}${destExtension}`, format: 'cjs' },
+    { file: `${destBase}.browser${destExtension}`, format: 'iife' }
   ],
   plugins: [
-    babel({
-      babelrc: false,
-      presets: [
-        [
-          'env',
-          {
-            modules: false
-          }
-        ]
-      ],
-      plugins: [
-        'transform-object-rest-spread'
-      ]
-    }),
+    babel(),
     isProduction && uglify(),
     filesize()
   ].filter((plugin) => !!plugin)

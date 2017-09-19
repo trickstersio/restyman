@@ -9,8 +9,9 @@ import killable from 'killable'
 const JSON_PORT = 30001
 const EXTERNAL_JSON_PORT = 30002
 
-const url = (path) => `http://localhost:${JSON_PORT}/${path}`
-const externalUrl = (path) => `http://localhost:${EXTERNAL_JSON_PORT}/${path}`
+const urlBuilder = (port) => `http://localhost:${port}`
+const url = (path) => `${urlBuilder(JSON_PORT)}/${path}`
+const externalUrl = (path) => `${urlBuilder(EXTERNAL_JSON_PORT)}/${path}`
 const createServer = (port, db) => {
   const server = jsonServer.create()
   server.use(jsonServer.defaults())
@@ -19,10 +20,6 @@ const createServer = (port, db) => {
   killable(app)
   return app
 }
-
-const axiosFactory = (path) => axios.create({ baseURL: url(path) })
-const externalFactory = (path) => axios.create({ baseURL: externalUrl(path) })
-const fetchFactory = (path) => (subpath, params) => fetch(url(`${path}${subpath}`))
 
 describe('restyman', () => {
   let server, expernalServer, companies, users, comments
@@ -109,7 +106,7 @@ describe('restyman', () => {
   describe('provider:axios', () => {
     beforeAll(() => {
       configure({
-        factory: axiosFactory
+        factory: (path) => axios.create({ baseURL: url(path) })
       })
     })
 
@@ -149,7 +146,7 @@ describe('restyman', () => {
 
       const externalComments = createResource({
         path: 'comments',
-        factory: externalFactory
+        factory: (path) => axios.create({ baseURL: externalUrl(path) })
       })
 
       externalComments.collection('index')
@@ -291,7 +288,7 @@ describe('restyman', () => {
   describe('provider:fetch', () => {
     beforeAll(() => {
       configure({
-        factory: fetchFactory
+        factory: (path) => (subpath, params) => fetch(url(`${path}${subpath}`))
       })
     })
 

@@ -1,8 +1,15 @@
 {
   "presets": [
-    "env"
+    ["env", {
+      "modules": false,
+      "loose": true
+    }]
   ],
-  "plugins": [
-    "transform-object-rest-spread"
-  ]
+  "env": {
+    "test": {
+      "plugins": [
+        "transform-es2015-modules-commonjs"
+      ]
+    }
+  }
 }

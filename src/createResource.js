@@ -52,7 +52,7 @@ export const createResource = (parameters) => {
 
   const _assignEndpoint = (endpoint) => function () {
     const req = (parameters.factory || config.factory)(this.getPath())
-    return endpoint.execute({ req, ...parameters }, ...arguments)
+    return endpoint.execute(Object.assign({ req }, parameters), ...arguments)
   }
 
   const _copyWithPrefix = function (resource, prefix) {
