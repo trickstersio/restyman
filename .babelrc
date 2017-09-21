@@ -1,9 +1,6 @@
 {
   "presets": [
-    ["env", {
-      "modules": false,
-      "loose": true
-    }]
+    ["env", { "modules": false }]
   ],
   "env": {
     "test": {
