@@ -1,3 +1,2 @@
 export { createResource } from './createResource'
-export { configure } from './config'
-export { methods } from './methods'
+export { default as config } from './config'

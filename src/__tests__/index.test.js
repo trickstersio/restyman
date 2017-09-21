@@ -1,5 +1,5 @@
 /* eslint-env jest */
-import { createResource, configure, methods } from '..'
+import { createResource, config as moduleConfig } from '..'
 import axios from 'axios'
 import fetch from 'node-fetch'
 
@@ -105,9 +105,7 @@ describe('restyman', () => {
 
   describe('provider:axios', () => {
     beforeAll(() => {
-      configure({
-        factory: (path) => axios.create({ baseURL: url(path) })
-      })
+      moduleConfig.factory = (path) => axios.create({ baseURL: url(path) })
     })
 
     it('executes correct collection request', async () => {
@@ -260,7 +258,7 @@ describe('restyman', () => {
 
     describe('methods', () => {
       it('registers global collection method', async () => {
-        methods.collection('index')
+        moduleConfig.collection('index')
           .request(({ req }, params = {}) => req.get('/', { params }))
 
         const books = createResource({ path: 'books' })
@@ -272,7 +270,7 @@ describe('restyman', () => {
       })
 
       it('registers global member method', async () => {
-        methods.member('destroy')
+        moduleConfig.member('destroy')
           .request(({ req }) => req.delete('/'))
 
         const books = createResource({ path: 'books' })
@@ -287,9 +285,7 @@ describe('restyman', () => {
 
   describe('provider:fetch', () => {
     beforeAll(() => {
-      configure({
-        factory: (path) => (subpath, params) => fetch(url(`${path}${subpath}`))
-      })
+      moduleConfig.factory = (path) => (subpath, params) => fetch(url(`${path}${subpath}`))
     })
 
     it('executes correct collection request', async () => {

@@ -1,7 +1,6 @@
-import { config } from './config'
-import { defineMethods } from './methods'
+import config, { defineMethods } from './config'
 import { createEndpoint } from './createEndpoint'
-import { NAMESPACES, forOwn } from './utils'
+import { reduceNamespaces, forOwn } from './utils'
 
 export const createResource = (parameters) => {
   const resources = {}
@@ -20,7 +19,7 @@ export const createResource = (parameters) => {
   const subresources = (_resources) => Object.assign(resources, _resources)
 
   const define = function (enhance) {
-    enhance(NAMESPACES.reduce(_definition(this), {}))
+    enhance(reduceNamespaces(_definition(this)))
   }
 
   const _create = (path) => {
