@@ -9,13 +9,13 @@ const _config = {
     'before': []
   },
   endpointMethods: {
-    execute: function () {
+    execute: function (...args) {
       for (let i in config.events.before) {
-        const result = config.events.before[i](this)(...arguments)
+        const result = config.events.before[i](this)(...args)
         if (result) return result
       }
 
-      return this.req(...arguments)
+      return this.req(...args)
     },
     request: function (req) {
       this.req = req
@@ -62,7 +62,7 @@ export const createResource = (parameters) => {
     enhance(reduceNamespaces(_definition(this)))
   }
 
-  const _create = (path) => {
+  const _create = (path, blueprint) => {
     const API = {
       collection,
       member,
@@ -70,13 +70,13 @@ export const createResource = (parameters) => {
       define,
       getPath: () => path
     }
-    return Object.assign((id) => _createResource(`${path}/${id}`), API)
+    return Object.assign((id) => _createResource(`${path}/${id}`), blueprint, API)
   }
 
   const _createResource = (path) => {
     const resource = createResource({ path })
     forOwn(resources, (sub, code) => {
-      resource[code] = _copyWithPrefix(sub, resource.getPath())
+      resource[code] = _create(`${resource.getPath()}/${sub.getPath()}`, sub)
     })
     forOwn(memberEndpoints, (endpoint, code) => {
       resource[code] = _assignEndpoint(endpoint)
@@ -89,15 +89,9 @@ export const createResource = (parameters) => {
     return result
   }
 
-  const _assignEndpoint = (endpoint) => function () {
+  const _assignEndpoint = (endpoint) => function (...args) {
     const req = (parameters.factory || config.factory)(this.getPath())
-    return endpoint.execute(Object.assign({ req }, parameters), ...arguments)
-  }
-
-  const _copyWithPrefix = function (resource, prefix) {
-    const copy = _create(`${prefix}/${resource.getPath()}`)
-    forOwn(resource, (v, k) => !copy[k] && (copy[k] = v))
-    return copy
+    return endpoint.execute(Object.assign({ req }, parameters), ...args)
   }
 
   return defineMethods(_create(parameters.path))
